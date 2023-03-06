@@ -5,14 +5,3 @@
  */
 
 export const finalize = Symbol('finalize')
-export const RESET_CSS_STYLE = css`
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
-  ::before,
-  ::after {
-    box-sizing: border-box;
-  }
-`

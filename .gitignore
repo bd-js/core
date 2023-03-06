@@ -1,5 +1,4 @@
 *.min.js
-*.min.css
 .httpserver
 index.html
 test.js

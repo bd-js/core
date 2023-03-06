@@ -14,10 +14,6 @@ export function css(strs, ...args) {
   while (tmp.length) {
     output += tmp.shift() + (args.shift() || '')
   }
-
-  if (args.length) {
-    output += args.join(' ')
-  }
   return output
 }
 
@@ -40,10 +36,6 @@ export function html(strs, ...args) {
         break
     }
     output += tmp.shift() + (_ === void 0 ? '' : _)
-  }
-
-  if (args.length) {
-    output += args.join(' ')
   }
   return output
 }

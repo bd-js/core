@@ -1,0 +1,26 @@
+{
+  "name": "@ninejs/core",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "",
+  "main": "dist/index.js",
+  "files": [
+    "dist/*"
+  ],
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bytedo/nine-core.git"
+  },
+  "keywords": [
+    "nine.",
+    "ninejs",
+    "nine-ui",
+    "nine-core"
+  ],
+  "devDependencies": {
+    "esbuild": "^0.17.11"
+  },
+  "author": "yutent",
+  "license": "MIT"
+}

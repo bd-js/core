@@ -2,7 +2,7 @@
   "name": "@ninejs/core",
   "version": "0.0.1",
   "type": "module",
-  "description": "",
+  "description": "9号UI组件库的核心",
   "main": "dist/index.js",
   "files": [
     "dist/*"

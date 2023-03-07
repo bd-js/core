@@ -7,7 +7,9 @@
   "files": [
     "dist/*"
   ],
-  "scripts": {},
+  "scripts": {
+    "build": "esbuild src/index.js --minify --bundle --format=esm --target=es2017 --outfile=dist/index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bytedo/nine-core.git"

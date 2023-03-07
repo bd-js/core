@@ -1,5 +1,9 @@
 ## 9号UI组件库的核心
 
+### 开发文档
+[开发文档](https://github.com/9th-js/core/wiki)
+
+### 示例
 
 ```js
 import { css, html, Component } from '//jscdn.ink/@ninejs/core/latest/index.js'
@@ -21,7 +25,7 @@ class Hello extends Component {
   render(){
     return html`
       <div>
-        <button @click="increase">点击我</button>
+        <button @click="${this.increase}">点击我</button>
       </div>
       <div>所有点击数为: <span>${this.count}</span></div>
     `
@@ -67,7 +71,7 @@ class Hello extends Component {
   render(){
     return html`
       <div>
-        <button @click="increase">点击我</button>
+        <button @click="${this.increase}">点击我</button>
       </div>
       <div>所有点击数为: <span>${this.count}</span></div>
     `

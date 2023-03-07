@@ -1,6 +1,6 @@
 {
   "name": "@ninejs/core",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "9号UI组件库的核心",
   "main": "dist/index.js",

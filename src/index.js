@@ -5,7 +5,30 @@
  */
 import { css, adoptStyles } from './css.js'
 import { render, html, svg } from './html.js'
-export { html, css, svg }
+import {
+  $,
+  $$,
+  nextTick,
+  offset,
+  bind,
+  unbind,
+  outsideClick,
+  clearOutsideClick,
+  fire
+} from './utils.js'
+export {
+  html,
+  css,
+  svg,
+  $,
+  $$,
+  nextTick,
+  offset,
+  bind,
+  unbind,
+  outsideClick,
+  clearOutsideClick
+}
 
 var defaultConverter = {
   toAttribute(value, type) {
@@ -378,4 +401,12 @@ export class Component extends HTMLElement {
   }
   updated(_changedProperties) {}
   firstUpdated(_changedProperties) {}
+
+  $on(type, callback) {
+    return bind(this, type, callback)
+  }
+
+  $emit(type, data = {}) {
+    return fire(this, type, data)
+  }
 }

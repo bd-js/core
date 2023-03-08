@@ -1,4 +1,4 @@
-import { WC_PART } from './constants.js'
+import { WC_PART, NO_CHANGE, NOTHING } from './constants.js'
 
 var ENABLE_EXTRA_SECURITY_HOOKS = true
 var global3 = window
@@ -67,29 +67,17 @@ var BOOLEAN_ATTRIBUTE_PART = 4
 var EVENT_PART = 5
 var ELEMENT_PART = 6
 var COMMENT_PART = 7
-var tag =
-  type =>
-  (strings, ...values) => {
-    return {
-      __dom_type__: type,
-      strings,
-      values
-    }
-  }
-export const html = tag(HTML_RESULT)
-export const svg = tag(SVG_RESULT)
-var noChange = Symbol.for('wc-noChange')
-var nothing = Symbol.for('wc-nothing')
+
 var templateCache = new WeakMap()
 var walker = d.createTreeWalker(d, 129, null, false)
 var sanitizerFactoryInternal = noopSanitizer
 var getTemplateHtml = (strings, type) => {
-  const l = strings.length - 1
+  const len = strings.length - 1
   const attrNames = []
   let html2 = type === SVG_RESULT ? '<svg>' : ''
   let rawTextEndRegex
   let regex = textEndRegex
-  for (let i = 0; i < l; i++) {
+  for (let i = 0; i < len; i++) {
     const s = strings[i]
     let attrNameEndIndex = -1
     let attrName
@@ -164,7 +152,7 @@ var getTemplateHtml = (strings, type) => {
           (attrNameEndIndex === -2 ? (attrNames.push(void 0), i) : end)
   }
   const htmlResult =
-    html2 + (strings[l] || '<?>') + (type === SVG_RESULT ? '</svg>' : '')
+    html2 + (strings[len] || '<?>') + (type === SVG_RESULT ? '</svg>' : '')
   if (!Array.isArray(strings) || !strings.hasOwnProperty('raw')) {
     let message = 'invalid template strings array'
 
@@ -267,7 +255,7 @@ class Template {
   }
 }
 function resolveDirective(part, value, parent = part, attributeIndex) {
-  if (value === noChange) {
+  if (value === NO_CHANGE) {
     return value
   }
   let currentDirective =
@@ -392,7 +380,7 @@ class ChildPart {
   constructor(startNode, endNode, parent, options) {
     var _a4
     this.type = CHILD_PART
-    this._$committedValue = nothing
+    this._$committedValue = NOTHING
     this._$disconnectableChildren = void 0
     this._$startNode = startNode
     this._$endNode = endNode
@@ -423,12 +411,12 @@ class ChildPart {
   _$setValue(value, directiveParent = this) {
     value = resolveDirective(this, value, directiveParent)
     if (isPrimitive(value)) {
-      if (value === nothing || value == null || value === '') {
-        if (this._$committedValue !== nothing) {
+      if (value === NOTHING || value == null || value === '') {
+        if (this._$committedValue !== NOTHING) {
           this._$clear()
         }
-        this._$committedValue = nothing
-      } else if (value !== this._$committedValue && value !== noChange) {
+        this._$committedValue = NOTHING
+      } else if (value !== this._$committedValue && value !== NO_CHANGE) {
         this._commitText(value)
       }
     } else if (value['__dom_type__'] !== void 0) {
@@ -463,7 +451,7 @@ class ChildPart {
   }
   _commitText(value) {
     if (
-      this._$committedValue !== nothing &&
+      this._$committedValue !== NOTHING &&
       isPrimitive(this._$committedValue)
     ) {
       const node = this._$startNode.nextSibling
@@ -567,7 +555,7 @@ class ChildPart {
 class AttributePart {
   constructor(element, name, strings, parent, options) {
     this.type = ATTRIBUTE_PART
-    this._$committedValue = nothing
+    this._$committedValue = NOTHING
     this._$disconnectableChildren = void 0
     this.element = element
     this.name = name
@@ -577,7 +565,7 @@ class AttributePart {
       this._$committedValue = new Array(strings.length - 1).fill(new String())
       this.strings = strings
     } else {
-      this._$committedValue = nothing
+      this._$committedValue = NOTHING
     }
     if (ENABLE_EXTRA_SECURITY_HOOKS) {
       this._sanitizer = void 0
@@ -596,23 +584,28 @@ class AttributePart {
       value = resolveDirective(this, value, directiveParent, 0)
       change =
         !isPrimitive(value) ||
-        (value !== this._$committedValue && value !== noChange)
+        (value !== this._$committedValue && value !== NO_CHANGE)
       if (change) {
         this._$committedValue = value
       }
     } else {
       const values = value
       value = strings[0]
-      let i, v
-      for (i = 0; i < strings.length - 1; i++) {
-        v = resolveDirective(this, values[valueIndex + i], directiveParent, i)
-        if (v === noChange) {
+
+      for (let i = 0; i < strings.length - 1; i++) {
+        let v = resolveDirective(
+          this,
+          values[valueIndex + i],
+          directiveParent,
+          i
+        )
+        if (v === NO_CHANGE) {
           v = this._$committedValue[i]
         }
         change || (change = !isPrimitive(v) || v !== this._$committedValue[i])
-        if (v === nothing) {
-          value = nothing
-        } else if (value !== nothing) {
+        if (v === NOTHING) {
+          value = NOTHING
+        } else if (value !== NOTHING) {
           value += (v !== null && v !== void 0 ? v : '') + strings[i + 1]
         }
         this._$committedValue[i] = v
@@ -623,7 +616,7 @@ class AttributePart {
     }
   }
   _commitValue(value) {
-    if (value === nothing) {
+    if (value === NOTHING) {
       this.element.removeAttribute(this.name)
     } else {
       if (ENABLE_EXTRA_SECURITY_HOOKS) {
@@ -661,7 +654,7 @@ class PropertyPart extends AttributePart {
       value = this._sanitizer(value)
     }
 
-    this.element[this.name] = value === nothing ? void 0 : value
+    this.element[this.name] = value === NOTHING ? void 0 : value
   }
 }
 var emptyStringForBooleanAttribute2 = ''
@@ -671,7 +664,7 @@ class BooleanAttributePart extends AttributePart {
     this.type = BOOLEAN_ATTRIBUTE_PART
   }
   _commitValue(value) {
-    if (value && value !== nothing) {
+    if (value && value !== NOTHING) {
       this.element.setAttribute(this.name, emptyStringForBooleanAttribute2)
     } else {
       this.element.removeAttribute(this.name)
@@ -685,20 +678,20 @@ class EventPart extends AttributePart {
   }
   _$setValue(newListener, directiveParent = this) {
     newListener =
-      resolveDirective(this, newListener, directiveParent, 0) || nothing
+      resolveDirective(this, newListener, directiveParent, 0) || NOTHING
 
-    if (newListener === noChange) {
+    if (newListener === NO_CHANGE) {
       return
     }
     const oldListener = this._$committedValue
     const shouldRemoveListener =
-      (newListener === nothing && oldListener !== nothing) ||
+      (newListener === NOTHING && oldListener !== NOTHING) ||
       newListener.capture !== oldListener.capture ||
       newListener.once !== oldListener.once ||
       newListener.passive !== oldListener.passive
     const shouldAddListener =
-      newListener !== nothing &&
-      (oldListener === nothing || shouldRemoveListener)
+      newListener !== NOTHING &&
+      (oldListener === NOTHING || shouldRemoveListener)
 
     if (shouldRemoveListener) {
       this.element.removeEventListener(this.name, this, oldListener)
@@ -752,6 +745,22 @@ export function render(value, container, options) {
 
   return part
 }
+
+export const html = (strings, ...values) => {
+  return {
+    __dom_type__: HTML_RESULT,
+    strings,
+    values
+  }
+}
+export const svg = (strings, ...values) => {
+  return {
+    __dom_type__: SVG_RESULT,
+    strings,
+    values
+  }
+}
+
 if (ENABLE_EXTRA_SECURITY_HOOKS) {
   render.setSanitizer = setSanitizer
   render.createSanitizer = createSanitizer

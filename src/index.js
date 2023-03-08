@@ -12,29 +12,16 @@ import {
 } from './constants.js'
 import { css, adoptStyles } from './css.js'
 import { render, html, svg } from './html.js'
-import {
-  $,
-  $$,
-  nextTick,
-  offset,
-  bind,
-  unbind,
-  outsideClick,
-  clearOutsideClick,
-  fire
-} from './utils.js'
-
-export { html, css, svg }
+import { fire, bind, unbind } from './utils.js'
 export {
   $,
   $$,
   nextTick,
   offset,
-  bind,
-  unbind,
   outsideClick,
   clearOutsideClick
-}
+} from './utils.js'
+export { html, css, svg, bind, unbind }
 
 export class Component extends HTMLElement {
   constructor() {
@@ -304,6 +291,10 @@ export class Component extends HTMLElement {
 
   $on(type, callback) {
     return bind(this, type, callback)
+  }
+
+  $off(type, callback) {
+    unbind(this, type, callback)
   }
 
   $emit(type, data = {}) {

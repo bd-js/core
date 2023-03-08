@@ -1,3 +1,5 @@
+import { WC_PART } from './constants.js'
+
 var ENABLE_EXTRA_SECURITY_HOOKS = true
 var global3 = window
 var debugLogRenderId = 0
@@ -34,12 +36,10 @@ var isArray = Array.isArray
 var isIterable = value =>
   isArray(value) ||
   typeof (value === null || value === void 0
-    ? void 0
+    ? false
     : value[Symbol.iterator]) === 'function'
-var SPACE_CHAR = `[ 	
-\f\r]`
-var ATTR_VALUE_CHAR = `[^ 	
-\f\r"'\`<>=]`
+var SPACE_CHAR = `[ \n\f\r]`
+var ATTR_VALUE_CHAR = `[^ \n\f\r"'\`<>=]`
 var NAME_CHAR = `[^\\s"'>=/]`
 var textEndRegex = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g
 var COMMENT_START = 1
@@ -80,7 +80,7 @@ export const html = tag(HTML_RESULT)
 export const svg = tag(SVG_RESULT)
 var noChange = Symbol.for('wc-noChange')
 var nothing = Symbol.for('wc-nothing')
-var templateCache = /* @__PURE__ */ new WeakMap()
+var templateCache = new WeakMap()
 var walker = d.createTreeWalker(d, 129, null, false)
 var sanitizerFactoryInternal = noopSanitizer
 var getTemplateHtml = (strings, type) => {
@@ -267,32 +267,24 @@ class Template {
   }
 }
 function resolveDirective(part, value, parent = part, attributeIndex) {
-  var _a4, _b4, _c4
-  var _d3
   if (value === noChange) {
     return value
   }
   let currentDirective =
     attributeIndex !== void 0
-      ? (_a4 = parent.__directives) === null || _a4 === void 0
-        ? void 0
-        : _a4[attributeIndex]
+      ? parent.__directives?.[attributeIndex]
       : parent.__directive
+
   const nextDirectiveConstructor = isPrimitive(value)
     ? void 0
     : value['_$litDirective$']
-  if (
-    (currentDirective === null || currentDirective === void 0
-      ? void 0
-      : currentDirective.constructor) !== nextDirectiveConstructor
-  ) {
-    ;(_b4 =
-      currentDirective === null || currentDirective === void 0
-        ? void 0
-        : currentDirective['_$notifyDirectiveConnectionChanged']) === null ||
-    _b4 === void 0
-      ? void 0
-      : _b4.call(currentDirective, false)
+
+  if (currentDirective?.constructor !== nextDirectiveConstructor) {
+    currentDirective._$notifyDirectiveConnectionChanged?.call(
+      currentDirective,
+      false
+    )
+
     if (nextDirectiveConstructor === void 0) {
       currentDirective = void 0
     } else {
@@ -300,9 +292,10 @@ function resolveDirective(part, value, parent = part, attributeIndex) {
       currentDirective._$initialize(part, parent, attributeIndex)
     }
     if (attributeIndex !== void 0) {
-      ;((_c4 = (_d3 = parent).__directives) !== null && _c4 !== void 0
-        ? _c4
-        : (_d3.__directives = []))[attributeIndex] = currentDirective
+      if (!parent.__directives) {
+        parent.__directives = []
+      }
+      parent.__directives[attributeIndex] = currentDirective
     } else {
       parent.__directive = currentDirective
     }
@@ -405,25 +398,13 @@ class ChildPart {
     this._$endNode = endNode
     this._$parent = parent
     this.options = options
-    this.__isConnected =
-      (_a4 =
-        options === null || options === void 0
-          ? void 0
-          : options.isConnected) !== null && _a4 !== void 0
-        ? _a4
-        : true
+    this.__isConnected = options?.isConnected || true
     if (ENABLE_EXTRA_SECURITY_HOOKS) {
       this._textSanitizer = void 0
     }
   }
   get _$isConnected() {
-    var _a4, _b4
-    return (_b4 =
-      (_a4 = this._$parent) === null || _a4 === void 0
-        ? void 0
-        : _a4._$isConnected) !== null && _b4 !== void 0
-      ? _b4
-      : this.__isConnected
+    return this._$parent?._$isConnected || this.__isConnected
   }
   get parentNode() {
     let parentNode = this._$startNode.parentNode
@@ -440,8 +421,6 @@ class ChildPart {
     return this._$endNode
   }
   _$setValue(value, directiveParent = this) {
-    var _a4
-
     value = resolveDirective(this, value, directiveParent)
     if (isPrimitive(value)) {
       if (value === nothing || value == null || value === '') {
@@ -466,21 +445,16 @@ class ChildPart {
     return this._$startNode.parentNode.insertBefore(node, ref)
   }
   _commitNode(value) {
-    var _a4
     if (this._$committedValue !== value) {
       this._$clear()
       if (
         ENABLE_EXTRA_SECURITY_HOOKS &&
         sanitizerFactoryInternal !== noopSanitizer
       ) {
-        const parentNodeName =
-          (_a4 = this._$startNode.parentNode) === null || _a4 === void 0
-            ? void 0
-            : _a4.nodeName
-        if (parentNodeName === 'STYLE' || parentNodeName === 'SCRIPT') {
-          let message = 'Forbidden'
+        const parentNodeName = this._$startNode.parentNode?.nodeName
 
-          throw new Error(message)
+        if (parentNodeName === 'STYLE' || parentNodeName === 'SCRIPT') {
+          throw new Error('Forbidden')
         }
       }
 
@@ -518,7 +492,6 @@ class ChildPart {
     this._$committedValue = value
   }
   _commitTemplateResult(result) {
-    var _a4
     const { values, ['__dom_type__']: type } = result
     const template =
       typeof type === 'number'
@@ -526,11 +499,8 @@ class ChildPart {
         : (type.el === void 0 &&
             (type.el = Template.createElement(type.h, this.options)),
           type)
-    if (
-      ((_a4 = this._$committedValue) === null || _a4 === void 0
-        ? void 0
-        : _a4._$template) === template
-    ) {
+
+    if (this._$committedValue?._$template === template) {
       this._$committedValue._update(values)
     } else {
       const instance = new TemplateInstance(template, this)
@@ -579,23 +549,18 @@ class ChildPart {
     }
   }
   _$clear(start = this._$startNode.nextSibling, from) {
-    var _a4
-    ;(_a4 = this._$notifyConnectionChanged) === null || _a4 === void 0
-      ? void 0
-      : _a4.call(this, false, true, from)
+    this._$notifyConnectionChanged?.call(this, false, true, from)
+
     while (start && start !== this._$endNode) {
-      const n = start.nextSibling
+      let node = start.nextSibling
       start.remove()
-      start = n
+      start = node
     }
   }
   setConnected(isConnected) {
-    var _a4
     if (this._$parent === void 0) {
       this.__isConnected = isConnected
-      ;(_a4 = this._$notifyConnectionChanged) === null || _a4 === void 0
-        ? void 0
-        : _a4.call(this, isConnected)
+      this._$notifyConnectionChanged?.call(this, isConnected)
     }
   }
 }
@@ -719,12 +684,9 @@ class EventPart extends AttributePart {
     this.type = EVENT_PART
   }
   _$setValue(newListener, directiveParent = this) {
-    var _a4
     newListener =
-      (_a4 = resolveDirective(this, newListener, directiveParent, 0)) !==
-        null && _a4 !== void 0
-        ? _a4
-        : nothing
+      resolveDirective(this, newListener, directiveParent, 0) || nothing
+
     if (newListener === noChange) {
       return
     }
@@ -747,17 +709,8 @@ class EventPart extends AttributePart {
     this._$committedValue = newListener
   }
   handleEvent(event) {
-    var _a4, _b4
     if (typeof this._$committedValue === 'function') {
-      this._$committedValue.call(
-        (_b4 =
-          (_a4 = this.options) === null || _a4 === void 0
-            ? void 0
-            : _a4.host) !== null && _b4 !== void 0
-          ? _b4
-          : this.element,
-        event
-      )
+      this._$committedValue.call(this.options?.host || this.element, event)
     } else {
       this._$committedValue.handleEvent(event)
     }
@@ -780,27 +733,15 @@ class ElementPart {
 }
 
 export function render(value, container, options) {
-  var _a4, _b4
-
   const renderId = 0
-  const partOwnerNode =
-    (_a4 =
-      options === null || options === void 0
-        ? void 0
-        : options.renderBefore) !== null && _a4 !== void 0
-      ? _a4
-      : container
-  let part = partOwnerNode['_$litPart$']
+  const partOwnerNode = options?.renderBefore || container
+
+  let part = partOwnerNode[WC_PART]
 
   if (part === void 0) {
-    const endNode =
-      (_b4 =
-        options === null || options === void 0
-          ? void 0
-          : options.renderBefore) !== null && _b4 !== void 0
-        ? _b4
-        : null
-    partOwnerNode['_$litPart$'] = part = new ChildPart(
+    const endNode = options?.renderBefore || null
+
+    partOwnerNode[WC_PART] = part = new ChildPart(
       container.insertBefore(createMarker(), endNode),
       endNode,
       void 0,

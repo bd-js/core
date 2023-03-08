@@ -1,10 +1,7 @@
 var ENABLE_EXTRA_SECURITY_HOOKS = true
 var global3 = window
-var debugLogEvent2 = void 0
 var debugLogRenderId = 0
 var issueWarning2
-
-var wrap = node => node
 
 var identityFunction = value => value
 var noopSanitizer = (_node, _name, _type) => identityFunction
@@ -262,15 +259,6 @@ class Template {
       }
       nodeIndex++
     }
-    debugLogEvent2 === null || debugLogEvent2 === void 0
-      ? void 0
-      : debugLogEvent2({
-          kind: 'template prep',
-          template: this,
-          clonableTemplate: this.el,
-          parts: this.parts,
-          strings
-        })
   }
   static createElement(html2, _options) {
     const el = d.createElement('template')
@@ -396,16 +384,6 @@ class TemplateInstance {
     let i = 0
     for (const part of this._parts) {
       if (part !== void 0) {
-        debugLogEvent2 === null || debugLogEvent2 === void 0
-          ? void 0
-          : debugLogEvent2({
-              kind: 'set part',
-              part,
-              value: values[i],
-              valueIndex: i,
-              values,
-              templateInstance: this
-            })
         if (part.strings !== void 0) {
           part._$setValue(values, part, i)
           i += part.strings.length - 2
@@ -448,7 +426,7 @@ class ChildPart {
       : this.__isConnected
   }
   get parentNode() {
-    let parentNode = wrap(this._$startNode).parentNode
+    let parentNode = this._$startNode.parentNode
     const parent = this._$parent
     if (parent !== void 0 && parentNode.nodeType === 11) {
       parentNode = parent.parentNode
@@ -468,15 +446,6 @@ class ChildPart {
     if (isPrimitive(value)) {
       if (value === nothing || value == null || value === '') {
         if (this._$committedValue !== nothing) {
-          debugLogEvent2 === null || debugLogEvent2 === void 0
-            ? void 0
-            : debugLogEvent2({
-                kind: 'commit nothing to child',
-                start: this._$startNode,
-                end: this._$endNode,
-                parent: this._$parent,
-                options: this.options
-              })
           this._$clear()
         }
         this._$committedValue = nothing
@@ -494,7 +463,7 @@ class ChildPart {
     }
   }
   _insert(node, ref = this._$endNode) {
-    return wrap(wrap(this._$startNode).parentNode).insertBefore(node, ref)
+    return this._$startNode.parentNode.insertBefore(node, ref)
   }
   _commitNode(value) {
     var _a4
@@ -514,15 +483,7 @@ class ChildPart {
           throw new Error(message)
         }
       }
-      debugLogEvent2 === null || debugLogEvent2 === void 0
-        ? void 0
-        : debugLogEvent2({
-            kind: 'commit node',
-            start: this._$startNode,
-            parent: this._$parent,
-            value,
-            options: this.options
-          })
+
       this._$committedValue = this._insert(value)
     }
   }
@@ -531,21 +492,14 @@ class ChildPart {
       this._$committedValue !== nothing &&
       isPrimitive(this._$committedValue)
     ) {
-      const node = wrap(this._$startNode).nextSibling
+      const node = this._$startNode.nextSibling
       if (ENABLE_EXTRA_SECURITY_HOOKS) {
         if (this._textSanitizer === void 0) {
           this._textSanitizer = createSanitizer(node, 'data', 'property')
         }
         value = this._textSanitizer(value)
       }
-      debugLogEvent2 === null || debugLogEvent2 === void 0
-        ? void 0
-        : debugLogEvent2({
-            kind: 'commit text',
-            node,
-            value,
-            options: this.options
-          })
+
       node.data = value
     } else {
       if (ENABLE_EXTRA_SECURITY_HOOKS) {
@@ -555,25 +509,10 @@ class ChildPart {
           this._textSanitizer = createSanitizer(textNode, 'data', 'property')
         }
         value = this._textSanitizer(value)
-        debugLogEvent2 === null || debugLogEvent2 === void 0
-          ? void 0
-          : debugLogEvent2({
-              kind: 'commit text',
-              node: textNode,
-              value,
-              options: this.options
-            })
+
         textNode.data = value
       } else {
         this._commitNode(d.createTextNode(value))
-        debugLogEvent2 === null || debugLogEvent2 === void 0
-          ? void 0
-          : debugLogEvent2({
-              kind: 'commit text',
-              node: wrap(this._$startNode).nextSibling,
-              value,
-              options: this.options
-            })
       }
     }
     this._$committedValue = value
@@ -635,18 +574,18 @@ class ChildPart {
       partIndex++
     }
     if (partIndex < itemParts.length) {
-      this._$clear(itemPart && wrap(itemPart._$endNode).nextSibling, partIndex)
+      this._$clear(itemPart && itemPart._$endNode.nextSibling, partIndex)
       itemParts.length = partIndex
     }
   }
-  _$clear(start = wrap(this._$startNode).nextSibling, from) {
+  _$clear(start = this._$startNode.nextSibling, from) {
     var _a4
     ;(_a4 = this._$notifyConnectionChanged) === null || _a4 === void 0
       ? void 0
       : _a4.call(this, false, true, from)
     while (start && start !== this._$endNode) {
-      const n = wrap(start).nextSibling
-      wrap(start).remove()
+      const n = start.nextSibling
+      start.remove()
       start = n
     }
   }
@@ -720,7 +659,7 @@ class AttributePart {
   }
   _commitValue(value) {
     if (value === nothing) {
-      wrap(this.element).removeAttribute(this.name)
+      this.element.removeAttribute(this.name)
     } else {
       if (ENABLE_EXTRA_SECURITY_HOOKS) {
         if (this._sanitizer === void 0) {
@@ -732,16 +671,8 @@ class AttributePart {
         }
         value = this._sanitizer(value !== null && value !== void 0 ? value : '')
       }
-      debugLogEvent2 === null || debugLogEvent2 === void 0
-        ? void 0
-        : debugLogEvent2({
-            kind: 'commit attribute',
-            element: this.element,
-            name: this.name,
-            value,
-            options: this.options
-          })
-      wrap(this.element).setAttribute(
+
+      this.element.setAttribute(
         this.name,
         value !== null && value !== void 0 ? value : ''
       )
@@ -764,15 +695,7 @@ class PropertyPart extends AttributePart {
       }
       value = this._sanitizer(value)
     }
-    debugLogEvent2 === null || debugLogEvent2 === void 0
-      ? void 0
-      : debugLogEvent2({
-          kind: 'commit property',
-          element: this.element,
-          name: this.name,
-          value,
-          options: this.options
-        })
+
     this.element[this.name] = value === nothing ? void 0 : value
   }
 }
@@ -783,22 +706,10 @@ class BooleanAttributePart extends AttributePart {
     this.type = BOOLEAN_ATTRIBUTE_PART
   }
   _commitValue(value) {
-    debugLogEvent2 === null || debugLogEvent2 === void 0
-      ? void 0
-      : debugLogEvent2({
-          kind: 'commit boolean attribute',
-          element: this.element,
-          name: this.name,
-          value: !!(value && value !== nothing),
-          options: this.options
-        })
     if (value && value !== nothing) {
-      wrap(this.element).setAttribute(
-        this.name,
-        emptyStringForBooleanAttribute2
-      )
+      this.element.setAttribute(this.name, emptyStringForBooleanAttribute2)
     } else {
-      wrap(this.element).removeAttribute(this.name)
+      this.element.removeAttribute(this.name)
     }
   }
 }
@@ -826,18 +737,7 @@ class EventPart extends AttributePart {
     const shouldAddListener =
       newListener !== nothing &&
       (oldListener === nothing || shouldRemoveListener)
-    debugLogEvent2 === null || debugLogEvent2 === void 0
-      ? void 0
-      : debugLogEvent2({
-          kind: 'commit event listener',
-          element: this.element,
-          name: this.name,
-          value: newListener,
-          options: this.options,
-          removeListener: shouldRemoveListener,
-          addListener: shouldAddListener,
-          oldListener
-        })
+
     if (shouldRemoveListener) {
       this.element.removeEventListener(this.name, this, oldListener)
     }
@@ -875,14 +775,6 @@ class ElementPart {
     return this._$parent._$isConnected
   }
   _$setValue(value) {
-    debugLogEvent2 === null || debugLogEvent2 === void 0
-      ? void 0
-      : debugLogEvent2({
-          kind: 'commit to element binding',
-          element: this.element,
-          value,
-          options: this.options
-        })
     resolveDirective(this, value)
   }
 }

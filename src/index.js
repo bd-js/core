@@ -3,6 +3,13 @@
  * @author yutent<yutent.io@gmail.com>
  * @date 2023/03/07 18:10:43
  */
+import {
+  FINALIZED,
+  UPDATE,
+  DEFAULT_CONVERTER,
+  DEFAULT_PROPERTY_DECLARATION,
+  notEqual
+} from './constants.js'
 import { css, adoptStyles } from './css.js'
 import { render, html, svg } from './html.js'
 import {
@@ -16,10 +23,9 @@ import {
   clearOutsideClick,
   fire
 } from './utils.js'
+
+export { html, css, svg }
 export {
-  html,
-  css,
-  svg,
   $,
   $$,
   nextTick,
@@ -30,52 +36,6 @@ export {
   clearOutsideClick
 }
 
-var defaultConverter = {
-  toAttribute(value, type) {
-    switch (type) {
-      case Boolean:
-        value = value ? '' : null
-        break
-      case Object:
-      case Array:
-        value = value == null ? value : JSON.stringify(value)
-        break
-    }
-    return value
-  },
-  fromAttribute(value, type) {
-    let fromValue = value
-    switch (type) {
-      case Boolean:
-        fromValue = value !== null
-        break
-      case Number:
-        fromValue = value === null ? null : Number(value)
-        break
-      case Object:
-      case Array:
-        try {
-          fromValue = JSON.parse(value)
-        } catch (e) {
-          fromValue = null
-        }
-        break
-    }
-    return fromValue
-  }
-}
-var notEqual = (value, old) => {
-  return old !== value && (old === old || value === value)
-}
-var defaultPropertyDeclaration = {
-  attribute: true,
-  type: String,
-  converter: defaultConverter,
-  reflect: false,
-  hasChanged: notEqual
-}
-var finalized = 'finalized'
-
 export class Component extends HTMLElement {
   constructor() {
     super()
@@ -85,14 +45,14 @@ export class Component extends HTMLElement {
     this.hasUpdated = false
     this.__reflectingProperty = null
     this._initialize()
+    this.created && this.created()
   }
   static addInitializer(initializer) {
-    var _a4
     this.finalize()
-    ;((_a4 = this._initializers) !== null && _a4 !== void 0
-      ? _a4
-      : (this._initializers = [])
-    ).push(initializer)
+    if (!this._initializers) {
+      this._initializers = []
+    }
+    this._initializers.push(initializer)
   }
   static get observedAttributes() {
     this.finalize()
@@ -106,11 +66,11 @@ export class Component extends HTMLElement {
     })
     return attributes
   }
-  static createProperty(name, options = defaultPropertyDeclaration) {
+  static createProperty(name, options = DEFAULT_PROPERTY_DECLARATION) {
     if (options.state) {
       options.attribute = false
     }
-    this.finalize()
+
     this.elementProperties.set(name, options)
 
     let key = Symbol(name)
@@ -133,13 +93,13 @@ export class Component extends HTMLElement {
     }
   }
   static getPropertyOptions(name) {
-    return this.elementProperties.get(name) || defaultPropertyDeclaration
+    return this.elementProperties.get(name) || DEFAULT_PROPERTY_DECLARATION
   }
   static finalize() {
-    if (this.hasOwnProperty(finalized)) {
+    if (this[FINALIZED]) {
       return false
     }
-    this[finalized] = true
+    this[FINALIZED] = true
 
     this.elementProperties = new Map()
     this.__attributeToPropertyMap = new Map()
@@ -163,32 +123,24 @@ export class Component extends HTMLElement {
       : void 0
   }
   _initialize() {
-    var _a4
     this.__updatePromise = new Promise(res => (this.enableUpdating = res))
     this._$changedProperties = new Map()
     this.__saveInstanceProperties()
     this.requestUpdate()
-    ;(_a4 = this.constructor._initializers) === null || _a4 === void 0
-      ? void 0
-      : _a4.forEach(i => i(this))
+    this.constructor._initializers?.forEach(i => i(this))
   }
   addController(controller) {
-    var _a4, _b4
-    ;((_a4 = this.__controllers) !== null && _a4 !== void 0
-      ? _a4
-      : (this.__controllers = [])
-    ).push(controller)
+    if (!this.__controllers) {
+      this.__controllers = []
+    }
+    this.__controllers.push(controller)
+
     if (this.root !== void 0 && this.isConnected) {
-      ;(_b4 = controller.hostConnected) === null || _b4 === void 0
-        ? void 0
-        : _b4.call(controller)
+      controller.hostConnected?.call(controller)
     }
   }
   removeController(controller) {
-    var _a4
-    ;(_a4 = this.__controllers) === null || _a4 === void 0
-      ? void 0
-      : _a4.splice(this.__controllers.indexOf(controller) >>> 0, 1)
+    this.__controllers?.splice(this.__controllers.indexOf(controller) >>> 0, 1)
   }
   __saveInstanceProperties() {
     this.constructor.elementProperties.forEach((_v, p) => {
@@ -198,54 +150,33 @@ export class Component extends HTMLElement {
       }
     })
   }
-  createRenderRoot() {
-    let root = this.shadowRoot || this.attachShadow({ mode: 'open' })
-    adoptStyles(root, this.constructor.styles)
-    return root
-  }
+
   connectedCallback() {
-    var _a4
-    if (this.root === void 0) {
-      this.root = this.createRenderRoot()
-    }
+    this.root = this.shadowRoot || this.attachShadow({ mode: 'open' })
+
+    adoptStyles(this.root, this.constructor.styles)
 
     this.enableUpdating(true)
-    ;(_a4 = this.__controllers) === null || _a4 === void 0
-      ? void 0
-      : _a4.forEach(c => {
-          var _a5
-          return (_a5 = c.hostConnected) === null || _a5 === void 0
-            ? void 0
-            : _a5.call(c)
-        })
-    this.__childPart && this.__childPart.setConnected(true)
+
+    this.__controllers?.forEach(it => it.hostConnected?.call(it))
+    this.__childPart?.setConnected(true)
+
+    this.mounted && this.mounted()
   }
   enableUpdating(_requestedUpdate) {}
   disconnectedCallback() {
-    var _a4
-    ;(_a4 = this.__controllers) === null || _a4 === void 0
-      ? void 0
-      : _a4.forEach(c => {
-          var _a5
-          return (_a5 = c.hostDisconnected) === null || _a5 === void 0
-            ? void 0
-            : _a5.call(c)
-        })
-    this.__childPart && this.__childPart.setConnected(false)
+    this.__controllers?.forEach(it => it.hostDisconnected?.call(it))
+    this.__childPart?.setConnected(false)
   }
   attributeChangedCallback(name, _old, value) {
     this._$attributeToProperty(name, value)
   }
-  __propertyToAttribute(name, value, options = defaultPropertyDeclaration) {
-    var _a4
+  __propertyToAttribute(name, value, options = DEFAULT_PROPERTY_DECLARATION) {
     const attr = this.constructor.__attributeNameForProperty(name, options)
     if (attr !== void 0 && options.reflect === true) {
-      const converter =
-        ((_a4 = options.converter) === null || _a4 === void 0
-          ? void 0
-          : _a4.toAttribute) !== void 0
-          ? options.converter
-          : defaultConverter
+      const converter = options.converter?.toAttribute
+        ? options.converter
+        : DEFAULT_CONVERTER
       const attrValue = converter.toAttribute(value, options.type)
 
       this.__reflectingProperty = name
@@ -258,7 +189,6 @@ export class Component extends HTMLElement {
     }
   }
   _$attributeToProperty(name, value) {
-    var _a4
     const ctor = this.constructor
     const propName = ctor.__attributeToPropertyMap.get(name)
     if (propName !== void 0 && this.__reflectingProperty !== propName) {
@@ -266,11 +196,9 @@ export class Component extends HTMLElement {
       const converter =
         typeof options.converter === 'function'
           ? { fromAttribute: options.converter }
-          : ((_a4 = options.converter) === null || _a4 === void 0
-              ? void 0
-              : _a4.fromAttribute) !== void 0
+          : options.converter?.fromAttribute
           ? options.converter
-          : defaultConverter
+          : DEFAULT_CONVERTER
       this.__reflectingProperty = propName
       this[propName] = converter.fromAttribute(value, options.type)
       this.__reflectingProperty = null
@@ -316,7 +244,6 @@ export class Component extends HTMLElement {
     return this.performUpdate()
   }
   performUpdate() {
-    var _a4, _b4
     if (!this.isUpdatePending) {
       return
     }
@@ -325,44 +252,20 @@ export class Component extends HTMLElement {
       this.__instanceProperties.forEach((v, p) => (this[p] = v))
       this.__instanceProperties = void 0
     }
-    let shouldUpdate = false
+
     const changedProperties = this._$changedProperties
     try {
-      shouldUpdate = this.shouldUpdate(changedProperties)
-      if (shouldUpdate) {
-        this.willUpdate(changedProperties)
-        ;(_b4 = this.__controllers) === null || _b4 === void 0
-          ? void 0
-          : _b4.forEach(c => {
-              var _a5
-              return (_a5 = c.hostUpdate) === null || _a5 === void 0
-                ? void 0
-                : _a5.call(c)
-            })
-        this.update(changedProperties)
-      } else {
-        this.__markUpdated()
-      }
+      this.__controllers?.forEach(it => it.hostUpdate?.call(it))
+      this[UPDATE](changedProperties)
+      this._$didUpdate(changedProperties)
     } catch (e) {
-      shouldUpdate = false
       this.__markUpdated()
       throw e
     }
-    if (shouldUpdate) {
-      this._$didUpdate(changedProperties)
-    }
   }
-  willUpdate(_changedProperties) {}
   _$didUpdate(changedProperties) {
-    var _a4
-    ;(_a4 = this.__controllers) === null || _a4 === void 0
-      ? void 0
-      : _a4.forEach(c => {
-          var _a5
-          return (_a5 = c.hostUpdated) === null || _a5 === void 0
-            ? void 0
-            : _a5.call(c)
-        })
+    this.__controllers?.forEach(it => it.hostUpdated?.call(it))
+
     if (!this.hasUpdated) {
       this.hasUpdated = true
       this.firstUpdated(changedProperties)
@@ -379,13 +282,10 @@ export class Component extends HTMLElement {
   getUpdateComplete() {
     return this.__updatePromise
   }
-  shouldUpdate(_changedProperties) {
-    return true
-  }
-  update(_changedProperties) {
-    const value = this.render()
 
-    /*  */
+  [UPDATE](_changedProperties) {
+    let value = this.render()
+
     if (this.__reflectingProperties !== void 0) {
       this.__reflectingProperties.forEach((v, k) =>
         this.__propertyToAttribute(k, this[k], v)

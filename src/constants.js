@@ -7,6 +7,8 @@
 export const FINALIZED = Symbol('finalized')
 export const UPDATE = Symbol('update')
 export const WC_PART = Symbol('wc_path')
+export const NO_CHANGE = Symbol('wc-noChange')
+export const NOTHING = Symbol('wc-nothing')
 
 export const RESET_CSS_STYLE = `
   * {box-sizing: border-box;margin: 0;padding: 0;}

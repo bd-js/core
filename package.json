@@ -1,8 +1,8 @@
 {
-  "name": "@ninejs/core",
+  "name": "@bd/core",
   "version": "0.2.0",
   "type": "module",
-  "description": "9号UI组件库的核心",
+  "description": "百搭UI组件库的核心",
   "main": "dist/index.js",
   "files": [
     "dist/*"
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bytedo/nine-core.git"
+    "url": "git+https://github.com/bd-js/core.git"
   },
   "keywords": [
     "nine.",

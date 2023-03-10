@@ -4,11 +4,16 @@
  * @date 2023/03/07 18:10:43
  */
 import {
-  FINALIZED,
-  UPDATE,
   DEFAULT_CONVERTER,
   DEFAULT_PROPERTY_DECLARATION,
-  notEqual
+  notEqual,
+  boolMap,
+  __finalized__,
+  __update__,
+  __init__,
+  __props__,
+  __changed_props__,
+  __mounted__
 } from './constants.js'
 import { css, adoptStyles } from './css.js'
 import { render, html, svg } from './html.js'
@@ -24,77 +29,70 @@ export {
 export { html, css, svg, bind, unbind }
 
 export class Component extends HTMLElement {
-  constructor() {
-    super()
-
-    this.__instanceProperties = new Map()
-    this.isUpdatePending = false
-    this.hasUpdated = false
-    this.__reflectingProperty = null
-    this._initialize()
-    this.created && this.created()
-  }
-  static addInitializer(initializer) {
-    this.finalize()
-    if (!this._initializers) {
-      this._initializers = []
-    }
-    this._initializers.push(initializer)
-  }
+  /**
+   * 声明可监听变化的属性列表
+   * @return list<Array>
+   */
   static get observedAttributes() {
+    let list = []
+
     this.finalize()
-    const attributes = []
-    this.elementProperties.forEach((v, p) => {
-      const attr = this.__attributeNameForProperty(p, v)
-      if (attr !== void 0) {
-        this.__attributeToPropertyMap.set(attr, p)
-        attributes.push(attr)
+
+    this[__props__].forEach((options, prop) => {
+      if (options) {
+        options.watch && list.push(k.toLowerCase())
+      } else {
+        list.push(k.toLowerCase())
       }
     })
-    return attributes
+    return list
   }
   static createProperty(name, options = DEFAULT_PROPERTY_DECLARATION) {
     if (options.state) {
       options.attribute = false
     }
 
-    this.elementProperties.set(name, options)
+    this[__props__].set(name, options)
 
     let key = Symbol(name)
-    let descriptor = this.getPropertyDescriptor(name, key, options)
-
-    this.prototype[key] = options.default
-    Object.defineProperty(this.prototype, name, descriptor)
-  }
-  static getPropertyDescriptor(name, key, options) {
-    return {
+    let descriptor = {
       get() {
         return this[key]
       },
       set(value) {
-        const oldValue = this[name]
+        let oldValue = this[key]
         this[key] = value
         this.requestUpdate(name, oldValue, options)
       },
-      configurable: true
+      enumerable: false
     }
+
+    Object.defineProperty(this.prototype, name, descriptor)
+
+    // this.prototype[name] = options.default
   }
-  static getPropertyOptions(name) {
-    return this.elementProperties.get(name) || DEFAULT_PROPERTY_DECLARATION
-  }
+
+  // 处理静态声明
   static finalize() {
-    if (this[FINALIZED]) {
+    if (this[__finalized__]) {
       return false
     }
-    this[FINALIZED] = true
+    this[__finalized__] = true
 
-    this.elementProperties = new Map()
-    this.__attributeToPropertyMap = new Map()
+    this[__props__] = new Map()
+
     if (this.hasOwnProperty('props')) {
       for (let k in this.props) {
+        if (boolMap[k] && k !== boolMap[k]) {
+          this.props[boolMap[k]] = this.props[k]
+          delete this.props[k]
+          k = boolMap[k]
+        }
         this.createProperty(k, this.props[k])
       }
     }
+
+    delete this.props
 
     return true
   }
@@ -109,33 +107,25 @@ export class Component extends HTMLElement {
       ? name.toLowerCase()
       : void 0
   }
-  _initialize() {
-    this.__updatePromise = new Promise(res => (this.enableUpdating = res))
-    this._$changedProperties = new Map()
-    this.__saveInstanceProperties()
-    this.requestUpdate()
-    this.constructor._initializers?.forEach(i => i(this))
-  }
-  addController(controller) {
-    if (!this.__controllers) {
-      this.__controllers = []
-    }
-    this.__controllers.push(controller)
 
-    if (this.root !== void 0 && this.isConnected) {
-      controller.hostConnected?.call(controller)
-    }
+  constructor() {
+    super()
+
+    this.isUpdatePending = false
+    this.__reflectingProperty = null
+    this[__mounted__] = false
+    this[__init__]()
+    this.created && this.created()
   }
-  removeController(controller) {
-    this.__controllers?.splice(this.__controllers.indexOf(controller) >>> 0, 1)
-  }
-  __saveInstanceProperties() {
-    this.constructor.elementProperties.forEach((_v, p) => {
-      if (this.hasOwnProperty(p)) {
-        this.__instanceProperties.set(p, this[p])
-        delete this[p]
-      }
+
+  [__init__]() {
+    this.__updatePromise = new Promise(res => (this.enableUpdating = res))
+    this[__changed_props__] = new Map() // 记录本次变化的属性
+    // 初始化 props
+    this.constructor[__props__].forEach((options, prop) => {
+      this[prop] = options.default
     })
+    this.requestUpdate()
   }
 
   connectedCallback() {
@@ -145,14 +135,10 @@ export class Component extends HTMLElement {
 
     this.enableUpdating(true)
 
-    this.__controllers?.forEach(it => it.hostConnected?.call(it))
     this.__childPart?.setConnected(true)
-
-    this.mounted && this.mounted()
   }
-  enableUpdating(_requestedUpdate) {}
+
   disconnectedCallback() {
-    this.__controllers?.forEach(it => it.hostDisconnected?.call(it))
     this.__childPart?.setConnected(false)
   }
   attributeChangedCallback(name, _old, value) {
@@ -194,11 +180,11 @@ export class Component extends HTMLElement {
   requestUpdate(name, oldValue, options) {
     let shouldRequestUpdate = true
     if (name !== void 0) {
-      options = options || this.constructor.getPropertyOptions(name)
+      options = options || this.constructor[__props__][name]
       const hasChanged = options.hasChanged || notEqual
       if (hasChanged(this[name], oldValue)) {
-        if (!this._$changedProperties.has(name)) {
-          this._$changedProperties.set(name, oldValue)
+        if (!this[__changed_props__].has(name)) {
+          this[__changed_props__].set(name, oldValue)
         }
         if (options.reflect === true && this.__reflectingProperty !== name) {
           if (this.__reflectingProperties === void 0) {
@@ -235,15 +221,9 @@ export class Component extends HTMLElement {
       return
     }
 
-    if (this.__instanceProperties) {
-      this.__instanceProperties.forEach((v, p) => (this[p] = v))
-      this.__instanceProperties = void 0
-    }
-
-    const changedProperties = this._$changedProperties
+    const changedProperties = this[__changed_props__]
     try {
-      this.__controllers?.forEach(it => it.hostUpdate?.call(it))
-      this[UPDATE](changedProperties)
+      this[__update__](changedProperties)
       this._$didUpdate(changedProperties)
     } catch (e) {
       this.__markUpdated()
@@ -251,16 +231,14 @@ export class Component extends HTMLElement {
     }
   }
   _$didUpdate(changedProperties) {
-    this.__controllers?.forEach(it => it.hostUpdated?.call(it))
-
-    if (!this.hasUpdated) {
-      this.hasUpdated = true
-      this.firstUpdated(changedProperties)
+    if (!this[__mounted__]) {
+      this[__mounted__] = true
+      this.mounted && this.mounted()
     }
     this.updated(changedProperties)
   }
   __markUpdated() {
-    this._$changedProperties = new Map()
+    this[__changed_props__] = new Map()
     this.isUpdatePending = false
   }
   get updateComplete() {
@@ -270,8 +248,8 @@ export class Component extends HTMLElement {
     return this.__updatePromise
   }
 
-  [UPDATE](_changedProperties) {
-    let value = this.render()
+  [__update__](_changedProperties) {
+    let htmlText = this.render()
 
     if (this.__reflectingProperties !== void 0) {
       this.__reflectingProperties.forEach((v, k) =>
@@ -280,14 +258,12 @@ export class Component extends HTMLElement {
       this.__reflectingProperties = void 0
     }
     this.__markUpdated()
-
-    this.__childPart = render(value, this.root, {
+    this.__childPart = render(htmlText, this.root, {
       host: this,
-      isConnected: !this.hasUpdated && this.isConnected
+      isConnected: !this[__mounted__] && this.isConnected
     })
   }
   updated(_changedProperties) {}
-  firstUpdated(_changedProperties) {}
 
   $on(type, callback) {
     return bind(this, type, callback)

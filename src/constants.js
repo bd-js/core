@@ -4,11 +4,45 @@
  * @date 2023/03/06 12:08:35
  */
 
-export const FINALIZED = Symbol('finalized')
-export const UPDATE = Symbol('update')
+const boolMap = {}
+
+;[
+  'autofocus',
+  'autoplay',
+  'async',
+  'allowTransparency',
+  'checked',
+  'controls',
+  'declare',
+  'disabled',
+  'defer',
+  'defaultChecked',
+  'defaultSelected',
+  'contentEditable',
+  'isMap',
+  'loop',
+  'multiple',
+  'noHref',
+  'noResize',
+  'noShade',
+  'open',
+  'readOnly',
+  'selected'
+].forEach(function (name) {
+  boolMap[name.toLowerCase()] = name
+})
+
+export { boolMap }
+
 export const WC_PART = Symbol('wc_path')
 export const NO_CHANGE = Symbol('wc-noChange')
 export const NOTHING = Symbol('wc-nothing')
+export const __finalized__ = Symbol('finalized')
+export const __update__ = Symbol('update')
+export const __init__ = Symbol('init')
+export const __props__ = Symbol('props')
+export const __changed_props__ = Symbol('changed_props')
+export const __mounted__ = Symbol('mounted')
 
 export const RESET_CSS_STYLE = `
   * {box-sizing: border-box;margin: 0;padding: 0;}
@@ -19,6 +53,7 @@ export const DEFAULT_CONVERTER = {
   toAttribute(value, type) {
     switch (type) {
       case Boolean:
+        // console.log(this, '>>>', value)
         value = value ? '' : null
         break
       case Object:
@@ -57,7 +92,9 @@ export function notEqual(value, old) {
 export const DEFAULT_PROPERTY_DECLARATION = {
   attribute: true,
   type: String,
-  converter: DEFAULT_CONVERTER,
+  formater: DEFAULT_CONVERTER,
+  // converter: DEFAULT_CONVERTER,
   reflect: false,
-  hasChanged: notEqual
+  hasChanged: notEqual,
+  default: ''
 }

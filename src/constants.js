@@ -4,7 +4,7 @@
  * @date 2023/03/06 12:08:35
  */
 
-const boolMap = {}
+const boolMap = Object.create(null)
 
 ;[
   'autofocus',
@@ -44,10 +44,7 @@ export const __props__ = Symbol('props')
 export const __changed_props__ = Symbol('changed_props')
 export const __mounted__ = Symbol('mounted')
 
-export const RESET_CSS_STYLE = `
-  * {box-sizing: border-box;margin: 0;padding: 0;}
-  ::before,::after {box-sizing: border-box;}
-`
+export const RESET_CSS_STYLE = `* {box-sizing: border-box;margin: 0;padding: 0;}::before,::after {box-sizing: border-box;}`
 
 export const DEFAULT_CONVERTER = {
   toAttribute(value, type) {

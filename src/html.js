@@ -25,8 +25,7 @@ var boundAttributeSuffix = '$wc$'
 var marker = `wc$${String(Math.random()).slice(9)}$`
 var markerMatch = '?' + marker
 var nodeMarker = `<${markerMatch}>`
-var d = document
-var createMarker = (v = '') => d.createComment(v)
+var createMarker = (v = '') => document.createComment(v)
 var isPrimitive = value =>
   value === null || (typeof value != 'object' && typeof value != 'function')
 var isArray = Array.isArray
@@ -66,7 +65,7 @@ var ELEMENT_PART = 6
 var COMMENT_PART = 7
 
 var templateCache = new WeakMap()
-var walker = d.createTreeWalker(d, 129, null, false)
+var walker = document.createTreeWalker(document, 129, null, false)
 var sanitizerFactoryInternal = noopSanitizer
 var getTemplateHtml = (strings, type) => {
   const len = strings.length - 1
@@ -246,7 +245,7 @@ class Template {
     }
   }
   static createElement(html2, _options) {
-    const el = d.createElement('template')
+    let el = document.createElement('template')
     el.innerHTML = html2
     return el
   }
@@ -309,24 +308,21 @@ class TemplateInstance {
     return this._$parent._$isConnected
   }
   _clone(options) {
-    var _a4
-    const {
+    let {
       el: { content },
       parts
     } = this._$template
-    const fragment = (
-      (_a4 =
-        options === null || options === void 0
-          ? void 0
-          : options.creationScope) !== null && _a4 !== void 0
-        ? _a4
-        : d
-    ).importNode(content, true)
+
+    let fragment = (options?.creationScope || document).importNode(
+      content,
+      true
+    )
     walker.currentNode = fragment
     let node = walker.nextNode()
     let nodeIndex = 0
     let partIndex = 0
     let templatePart = parts[0]
+
     while (templatePart !== void 0) {
       if (nodeIndex === templatePart.index) {
         let part
@@ -375,7 +371,6 @@ class TemplateInstance {
 }
 class ChildPart {
   constructor(startNode, endNode, parent, options) {
-    var _a4
     this.type = CHILD_PART
     this._$committedValue = NOTHING
     this._$disconnectableChildren = void 0
@@ -471,7 +466,7 @@ class ChildPart {
 
         textNode.data = value
       } else {
-        this._commitNode(d.createTextNode(value))
+        this._commitNode(document.createTextNode(value))
       }
     }
     this._$committedValue = value
@@ -654,7 +649,7 @@ class PropertyPart extends AttributePart {
     this.element[this.name] = value === NOTHING ? void 0 : value
   }
 }
-var emptyStringForBooleanAttribute2 = ''
+
 class BooleanAttributePart extends AttributePart {
   constructor() {
     super(...arguments)
@@ -662,12 +657,14 @@ class BooleanAttributePart extends AttributePart {
   }
   _commitValue(value) {
     if (value && value !== NOTHING) {
-      this.element.setAttribute(this.name, emptyStringForBooleanAttribute2)
+      // 布尔属性,值固定为空
+      this.element.setAttribute(this.name, '')
     } else {
       this.element.removeAttribute(this.name)
     }
   }
 }
+
 class EventPart extends AttributePart {
   constructor(element, name, strings, parent, options) {
     super(element, name, strings, parent, options)

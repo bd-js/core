@@ -122,6 +122,7 @@ export class Component extends HTMLElement {
 
   disconnectedCallback() {
     this[__children__]?.setConnected(false)
+    this.unmounted()
   }
   // 监听属性变化
   attributeChangedCallback(name, old, val) {
@@ -226,6 +227,7 @@ export class Component extends HTMLElement {
   // 几个生命周期回调
   created() {}
   mounted() {}
+  unmounted() {}
   updated() {}
 
   $on(type, callback) {

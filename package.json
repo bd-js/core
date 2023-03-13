@@ -1,6 +1,6 @@
 {
   "name": "@bd/core",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "百搭UI组件库的核心",
   "main": "dist/index.js",
@@ -15,10 +15,11 @@
     "url": "git+https://github.com/bd-js/core.git"
   },
   "keywords": [
-    "nine.",
-    "ninejs",
-    "nine-ui",
-    "nine-core"
+    "bd.js",
+    "bdjs",
+    "bd-ui",
+    "wcui",
+    "bd-core"
   ],
   "devDependencies": {
     "esbuild": "^0.17.11"

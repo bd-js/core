@@ -141,6 +141,10 @@ export class Component extends HTMLElement {
   [__prop2attr__](name, value) {
     let options = this.#getPropOptions(name)
 
+    if (options.attribute === false) {
+      return
+    }
+
     switch (options.type) {
       case Number:
       case String:

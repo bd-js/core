@@ -1,6 +1,6 @@
 {
   "name": "@bd/core",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "百搭UI组件库的核心",
   "main": "dist/index.js",

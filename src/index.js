@@ -56,7 +56,7 @@ export class Component extends HTMLElement {
           return
         }
         this[key] = value
-        this.requestUpdate(name, oldValue)
+        this.#requestUpdate(name, oldValue)
       },
       enumerable: false
     }
@@ -177,7 +177,7 @@ export class Component extends HTMLElement {
   }
 
   // 请求更新
-  requestUpdate(name, oldValue) {
+  #requestUpdate(name, oldValue) {
     let shouldUpdate = true
 
     this[__changed_props__].set(name, this[name])

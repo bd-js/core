@@ -208,7 +208,7 @@ export class Component extends HTMLElement {
     // 初始化时不触发updated回调
     if (!this[__mounted__]) {
       this[__mounted__] = true
-      this.mounted(props)
+      this.mounted()
     } else {
       this.updated(props)
     }

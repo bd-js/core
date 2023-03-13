@@ -1,9 +1,6 @@
 import { WC_PART, NO_CHANGE, NOTHING } from './constants.js'
 
 var ENABLE_EXTRA_SECURITY_HOOKS = true
-var global3 = window
-var debugLogRenderId = 0
-var issueWarning2
 
 var identityFunction = value => value
 var noopSanitizer = (_node, _name, _type) => identityFunction
@@ -726,17 +723,12 @@ class ElementPart {
 }
 
 export function render(value, container, options) {
-  const renderId = 0
-  const partOwnerNode = options?.renderBefore || container
-
-  let part = partOwnerNode[WC_PART]
+  let part = container[WC_PART]
 
   if (part === void 0) {
-    const endNode = options?.renderBefore || null
-
-    partOwnerNode[WC_PART] = part = new ChildPart(
-      container.insertBefore(createMarker(), endNode),
-      endNode,
+    container[WC_PART] = part = new ChildPart(
+      container.insertBefore(createMarker(), null),
+      null,
       void 0,
       options !== null && options !== void 0 ? options : {}
     )

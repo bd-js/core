@@ -4,29 +4,28 @@
  * @date 2023/03/07 18:10:43
  */
 import {
-  DEFAULT_CONVERTER,
-  DEFAULT_PROPERTY_DECLARATION,
-  notEqual,
+  fixedValue,
+  parsePropsDeclaration,
   boolMap,
   __finalized__,
-  __update__,
+  __render__,
   __init__,
   __props__,
   __changed_props__,
-  __mounted__
+  __mounted__,
+  __feedback__,
+  __pending__,
+  __prop2attr__,
+  __attr2prop__,
+  __clear_update__,
+  __children__,
+  __updated__
 } from './constants.js'
 import { css, adoptStyles } from './css.js'
 import { render, html, svg } from './html.js'
-import { fire, bind, unbind } from './utils.js'
-export {
-  $,
-  $$,
-  nextTick,
-  offset,
-  outsideClick,
-  clearOutsideClick
-} from './utils.js'
-export { html, css, svg, bind, unbind }
+import { nextTick, fire, bind, unbind } from './utils.js'
+export { $, $$, offset, outsideClick, clearOutsideClick } from './utils.js'
+export { html, css, svg, bind, unbind, nextTick }
 
 export class Component extends HTMLElement {
   /**
@@ -39,21 +38,12 @@ export class Component extends HTMLElement {
     this.finalize()
 
     this[__props__].forEach((options, prop) => {
-      if (options) {
-        options.watch && list.push(k.toLowerCase())
-      } else {
-        list.push(k.toLowerCase())
-      }
+      options.attribute && list.push(prop.toLowerCase())
     })
     return list
   }
-  static createProperty(name, options = DEFAULT_PROPERTY_DECLARATION) {
-    if (options.state) {
-      options.attribute = false
-    }
 
-    this[__props__].set(name, options)
-
+  static createProperty(name, options) {
     let key = Symbol(name)
     let descriptor = {
       get() {
@@ -61,15 +51,18 @@ export class Component extends HTMLElement {
       },
       set(value) {
         let oldValue = this[key]
+        value = fixedValue(value, options)
+        if (oldValue === value) {
+          return
+        }
         this[key] = value
-        this.requestUpdate(name, oldValue, options)
+        this.requestUpdate(name, oldValue)
       },
       enumerable: false
     }
 
+    this[__props__].set(name, options)
     Object.defineProperty(this.prototype, name, descriptor)
-
-    // this.prototype[name] = options.default
   }
 
   // 处理静态声明
@@ -83,187 +76,157 @@ export class Component extends HTMLElement {
 
     if (this.hasOwnProperty('props')) {
       for (let k in this.props) {
+        let options = parsePropsDeclaration(this.props[k])
         if (boolMap[k] && k !== boolMap[k]) {
-          this.props[boolMap[k]] = this.props[k]
-          delete this.props[k]
           k = boolMap[k]
         }
-        this.createProperty(k, this.props[k])
+        this.createProperty(k, options)
       }
     }
 
     delete this.props
-
-    return true
-  }
-
-  static __attributeNameForProperty(name, options) {
-    const attribute = options.attribute
-    return attribute === false
-      ? void 0
-      : typeof attribute === 'string'
-      ? attribute
-      : typeof name === 'string'
-      ? name.toLowerCase()
-      : void 0
   }
 
   constructor() {
     super()
-
-    this.isUpdatePending = false
-    this.__reflectingProperty = null
+    this[__pending__] = false
     this[__mounted__] = false
     this[__init__]()
-    this.created && this.created()
+    this.created()
   }
 
   [__init__]() {
-    this.__updatePromise = new Promise(res => (this.enableUpdating = res))
+    this.root = this.shadowRoot || this.attachShadow({ mode: 'open' })
+
     this[__changed_props__] = new Map() // 记录本次变化的属性
     // 初始化 props
     this.constructor[__props__].forEach((options, prop) => {
       this[prop] = options.default
     })
-    this.requestUpdate()
+    // 若无定义props时, 手动执行一次渲染
+    if (this[__pending__] === false) {
+      this[__pending__] = true
+      this.performUpdate()
+    }
+  }
+
+  #getPropOptions(name) {
+    return this.constructor[__props__].get(name)
   }
 
   connectedCallback() {
-    this.root = this.shadowRoot || this.attachShadow({ mode: 'open' })
-
     adoptStyles(this.root, this.constructor.styles)
 
-    this.enableUpdating(true)
-
-    this.__childPart?.setConnected(true)
+    this[__children__]?.setConnected(true)
   }
 
   disconnectedCallback() {
-    this.__childPart?.setConnected(false)
+    this[__children__]?.setConnected(false)
   }
-  attributeChangedCallback(name, _old, value) {
-    this._$attributeToProperty(name, value)
-  }
-  __propertyToAttribute(name, value, options = DEFAULT_PROPERTY_DECLARATION) {
-    const attr = this.constructor.__attributeNameForProperty(name, options)
-    if (attr !== void 0 && options.reflect === true) {
-      const converter = options.converter?.toAttribute
-        ? options.converter
-        : DEFAULT_CONVERTER
-      const attrValue = converter.toAttribute(value, options.type)
-
-      this.__reflectingProperty = name
-      if (attrValue == null) {
-        this.removeAttribute(attr)
-      } else {
-        this.setAttribute(attr, attrValue)
-      }
-      this.__reflectingProperty = null
-    }
-  }
-  _$attributeToProperty(name, value) {
-    const ctor = this.constructor
-    const propName = ctor.__attributeToPropertyMap.get(name)
-    if (propName !== void 0 && this.__reflectingProperty !== propName) {
-      const options = ctor.getPropertyOptions(propName)
-      const converter =
-        typeof options.converter === 'function'
-          ? { fromAttribute: options.converter }
-          : options.converter?.fromAttribute
-          ? options.converter
-          : DEFAULT_CONVERTER
-      this.__reflectingProperty = propName
-      this[propName] = converter.fromAttribute(value, options.type)
-      this.__reflectingProperty = null
-    }
-  }
-  requestUpdate(name, oldValue, options) {
-    let shouldRequestUpdate = true
-    if (name !== void 0) {
-      options = options || this.constructor[__props__][name]
-      const hasChanged = options.hasChanged || notEqual
-      if (hasChanged(this[name], oldValue)) {
-        if (!this[__changed_props__].has(name)) {
-          this[__changed_props__].set(name, oldValue)
-        }
-        if (options.reflect === true && this.__reflectingProperty !== name) {
-          if (this.__reflectingProperties === void 0) {
-            this.__reflectingProperties = new Map()
-          }
-          this.__reflectingProperties.set(name, options)
-        }
-      } else {
-        shouldRequestUpdate = false
-      }
-    }
-    if (!this.isUpdatePending && shouldRequestUpdate) {
-      this.__updatePromise = this.__enqueueUpdate()
-    }
-  }
-  async __enqueueUpdate() {
-    this.isUpdatePending = true
-    try {
-      await this.__updatePromise
-    } catch (e) {
-      Promise.reject(e)
-    }
-    const result = this.scheduleUpdate()
-    if (result != null) {
-      await result
-    }
-    return !this.isUpdatePending
-  }
-  scheduleUpdate() {
-    return this.performUpdate()
-  }
-  performUpdate() {
-    if (!this.isUpdatePending) {
+  // 监听属性变化
+  attributeChangedCallback(name, old, val) {
+    if (old === val) {
       return
     }
+    this[__attr2prop__](name, val)
+  }
 
-    const changedProperties = this[__changed_props__]
-    try {
-      this[__update__](changedProperties)
-      this._$didUpdate(changedProperties)
-    } catch (e) {
-      this.__markUpdated()
-      throw e
+  /**
+   * 处理需要显式渲染到html标签上的属性
+   * 复杂类型永不显式渲染
+   * @param name<String>
+   * @param value<String|Boolean|Number>
+   */
+  [__prop2attr__](name, value) {
+    let options = this.#getPropOptions(name)
+
+    switch (options.type) {
+      case Number:
+      case String:
+        if (value === null) {
+          this.removeAttribute(name)
+        } else {
+          this.setAttribute(name, value)
+        }
+        break
+
+      case Boolean:
+        if (value === null || value === false) {
+          this.removeAttribute(name)
+        } else {
+          this.setAttribute(name, '')
+        }
+        break
     }
   }
-  _$didUpdate(changedProperties) {
+
+  /**
+   * 通过setAttribute设置的值, 需要转成props
+   * @param name<String>
+   * @param value<String|Boolean|Number>
+   */
+  [__attr2prop__](name, value) {
+    let options = this.#getPropOptions(name)
+
+    this[name] = fixedValue(value, options)
+  }
+
+  // 请求更新
+  requestUpdate(name, oldValue) {
+    let shouldUpdate = true
+
+    this[__changed_props__].set(name, this[name])
+    this[__prop2attr__](name, this[name])
+
+    if (this[__pending__] === false) {
+      this[__pending__] = true
+      nextTick(_ => this[__updated__]())
+    }
+  }
+
+  // 确认更新到视图
+  [__updated__]() {
+    if (this[__pending__]) {
+      try {
+        let props = this[__changed_props__]
+        this[__render__]()
+        this[__feedback__](props)
+      } catch (err) {
+        console.error(err)
+      }
+      this[__clear_update__]()
+    }
+  }
+
+  // 更新回调反馈
+  [__feedback__](props) {
+    // 初始化时不触发updated回调
     if (!this[__mounted__]) {
       this[__mounted__] = true
-      this.mounted && this.mounted()
+      this.mounted(props)
+    } else {
+      this.updated(props)
     }
-    this.updated(changedProperties)
-  }
-  __markUpdated() {
-    this[__changed_props__] = new Map()
-    this.isUpdatePending = false
-  }
-  get updateComplete() {
-    return this.getUpdateComplete()
-  }
-  getUpdateComplete() {
-    return this.__updatePromise
   }
 
-  [__update__](_changedProperties) {
+  [__clear_update__]() {
+    this[__changed_props__] = new Map()
+    this[__pending__] = false
+  }
+
+  // 渲染视图
+  [__render__]() {
     let htmlText = this.render()
 
-    if (this.__reflectingProperties !== void 0) {
-      this.__reflectingProperties.forEach((v, k) =>
-        this.__propertyToAttribute(k, this[k], v)
-      )
-      this.__reflectingProperties = void 0
-    }
-    this.__markUpdated()
-    this.__childPart = render(htmlText, this.root, {
+    this[__children__] = render(htmlText, this.root, {
       host: this,
       isConnected: !this[__mounted__] && this.isConnected
     })
   }
-  updated(_changedProperties) {}
+  // 几个生命周期回调
+  created() {}
+  mounted() {}
+  updated() {}
 
   $on(type, callback) {
     return bind(this, type, callback)

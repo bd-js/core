@@ -6,6 +6,18 @@
 
 import { RESET_CSS_STYLE } from './constants.js'
 
+let MyCSSStyleSheet = CSSStyleSheet
+
+if (!document.adoptedStyleSheets) {
+  MyCSSStyleSheet = class {
+    elem = document.createElement('style')
+
+    replaceSync(css) {
+      this.elem.textContent = css.replace(/\s+/g, ' ')
+    }
+  }
+}
+
 export function css(strs, ...args) {
   let output = ''
   let tmp = Array.from(strs)
@@ -16,7 +28,7 @@ export function css(strs, ...args) {
 }
 
 export function adoptStyles(root, styles = '') {
-  let sheet = new CSSStyleSheet()
+  let sheet = new MyCSSStyleSheet()
   if (typeof styles === 'string') {
     styles = [styles]
   } else {
@@ -24,5 +36,9 @@ export function adoptStyles(root, styles = '') {
   }
   styles = (RESET_CSS_STYLE + styles.join(' ')).trim()
   sheet.replaceSync(styles)
-  root.adoptedStyleSheets.push(sheet)
+  if (root.adoptedStyleSheets) {
+    root.adoptedStyleSheets.push(sheet)
+  } else {
+    root.appendChild(sheet.elem)
+  }
 }

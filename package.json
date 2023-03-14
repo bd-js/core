@@ -1,6 +1,6 @@
 {
   "name": "@bd/core",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "type": "module",
   "description": "百搭UI组件库的核心",
   "main": "dist/index.js",
@@ -8,7 +8,8 @@
     "dist/*"
   ],
   "scripts": {
-    "build": "esbuild src/index.js --minify --bundle --format=esm --target=es2017 --outfile=dist/index.js"
+    "build": "esbuild src/index.js --minify --bundle --format=esm --target=esnext --outfile=dist/index.js",
+    "build-es6": "esbuild src/index.js --minify --bundle --format=esm --target=es6 --outfile=dist/index.es6.js"
   },
   "repository": {
     "type": "git",
